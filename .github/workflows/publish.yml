@@ -3,7 +3,7 @@ name: Publish to Open VSX
 on:
   pull_request:
     types: [closed]
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   publish:
@@ -58,12 +58,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Switch to master branch
+      - name: Switch to main branch
         run: |
-          git checkout master
-          git pull origin master
+          git checkout main
+          git pull origin main
       
-      - name: Bump version in master
+      - name: Bump version in main
         id: bump
         run: |
           git config --global user.name 'github-actions[bot]'
@@ -115,7 +115,7 @@ jobs:
         with:
           pat: ${{ secrets.OPEN_VSX_TOKEN }}
       
-      - name: Sync dev with master
+      - name: Sync dev with main
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
@@ -124,9 +124,9 @@ jobs:
           git checkout dev
           
           echo "Current branch: $(git branch --show-current)"
-          echo "Merging master into dev..."
+          echo "Merging main into dev..."
           
-          git merge origin/master --no-ff -m "Merge master into dev after release v${{ steps.bump.outputs.new-version }} [skip ci]"
+          git merge origin/main --no-ff -m "Merge main into dev after release v${{ steps.bump.outputs.new-version }} [skip ci]"
           
           git push
         env:
@@ -154,6 +154,6 @@ jobs:
               - [Open VSX](https://open-vsx.org/extension/${{ github.repository_owner }}/${{ github.event.repository.name }}/v${newVersion})
               
               ### 🔄 Sync:
-              - ✅ \`dev\` branch synced with \`master\`
+              - ✅ \`dev\` branch synced with \`main\`
               `
             });
