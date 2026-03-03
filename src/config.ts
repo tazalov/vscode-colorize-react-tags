@@ -1,45 +1,17 @@
 import * as vscode from 'vscode'
+import { ExtensionConfig } from './types'
 
 /**
- * Получение состояния вкл/выкл работы расширения (из конфига)
- * @returns
+ * Получение конфигурации расширения (из пользовательского конфига)
+ * @returns объект конфигурации
  */
-export function getEnabled(): boolean {
+export function getConfig(): ExtensionConfig {
   const config = vscode.workspace.getConfiguration('colorizeReactTags')
-  return config.get<boolean>('enabled', true)
-}
-/**
- * Получение максимального размера файла (из конфига)
- * @returns размер файла в байтах
- */
-export function getMaxFileSize(): number {
-  const config = vscode.workspace.getConfiguration('colorizeReactTags')
-  return config.get<number>('maxFileSize', 100000)
-}
-
-/**
- * Получение задержки обновления пересчета цветов при изменении документа (из конфига)
- * @returns delay (ms)
- */
-export function getDebounceDelay(): number {
-  const config = vscode.workspace.getConfiguration('colorizeReactTags')
-  return config.get<number>('debounceDelay', 300)
-}
-
-/**
- * Получение уровня насыщенности цвета (из конфига)
- * @returns насыщенность (0-100)
- */
-export function getSaturation(): number {
-  const config = vscode.workspace.getConfiguration('colorizeReactTags')
-  return config.get<number>('saturation', 60)
-}
-
-/**
- * Получение уровня яркости цвета (из конфига)
- * @returns ясркость (0-100)
- */
-export function getLightness(): number {
-  const config = vscode.workspace.getConfiguration('colorizeReactTags')
-  return config.get<number>('lightness', 60)
+  return {
+    enabled: config.get<boolean>('enabled', true),
+    maxFileSize: config.get<number>('maxFileSize', 100000),
+    debounceDelay: config.get<number>('debounceDelay', 300),
+    saturation: config.get<number>('saturation', 60),
+    lightness: config.get<number>('lightness', 60),
+  }
 }
