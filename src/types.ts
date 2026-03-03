@@ -10,3 +10,11 @@ export interface StackItem {
   tagName: string
   level: number
 }
+
+export interface ExtensionConfig {
+  enabled: boolean
+  maxFileSize: number
+  debounceDelay: number
+  saturation: number
+  lightness: number
+}

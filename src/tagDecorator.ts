@@ -4,13 +4,7 @@ import traverse, { NodePath } from '@babel/traverse'
 import { extractTagNameRange, getColorForLevel, getTagName } from './utils'
 import { StackItem, TagRange } from './types'
 import { BABEL_PLUGINS, CACHE_SIZE, DEFAULT_CONFIG, FRAGMENT } from './consts'
-import {
-  getDebounceDelay,
-  getEnabled,
-  getLightness,
-  getMaxFileSize,
-  getSaturation,
-} from './config'
+import { getConfig } from './config'
 
 export class TagDecorator {
   // Список декораций
@@ -30,20 +24,12 @@ export class TagDecorator {
   private readonly plugins: parser.ParserPlugin[] = BABEL_PLUGINS
 
   constructor() {
-    this.enabled = getEnabled()
-    this.maxFileSize = getMaxFileSize()
-    this.debounceDelay = getDebounceDelay()
-    this.saturation = getSaturation()
-    this.lightness = getLightness()
+    this.updateConfig()
 
     // Слушатель изменений пользовательской конфигурации
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('colorizeReactTags')) {
-        this.enabled = getEnabled()
-        this.maxFileSize = getMaxFileSize()
-        this.debounceDelay = getDebounceDelay()
-        this.saturation = getSaturation()
-        this.lightness = getLightness()
+        this.updateConfig()
 
         if (this.enabled) {
           this.updateAllEditors()
@@ -52,6 +38,16 @@ export class TagDecorator {
         }
       }
     })
+  }
+
+  private updateConfig() {
+    const config = getConfig()
+
+    this.enabled = config.enabled
+    this.maxFileSize = config.maxFileSize
+    this.debounceDelay = config.debounceDelay
+    this.saturation = config.saturation
+    this.lightness = config.lightness
   }
 
   public updateDocument(editor: vscode.TextEditor | undefined): void {
