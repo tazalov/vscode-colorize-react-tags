@@ -1,32 +1,69 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode'
+import { TagDecorator } from './tagDecorator'
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+let tagDecorator: TagDecorator
+
 export function activate(context: vscode.ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log(
-    'Congratulations, your extension "colorize-react-tags" is now active!',
+  console.log('Расширение активно!')
+
+  tagDecorator = new TagDecorator()
+
+  // Первый апдейт для всех видимых документов
+  vscode.window.visibleTextEditors.forEach((editor) => {
+    tagDecorator.updateDocument(editor)
+  })
+
+  // Обновляем при изменении активного документа
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      tagDecorator.updateDocument(editor)
+    }),
   )
 
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with registerCommand
-  // The commandId parameter must match the command field in package.json
-  const disposable = vscode.commands.registerCommand(
-    'colorize-react-tags.helloWorld',
+  // Обновляем при внесении изменений в документ
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeTextDocument((event) => {
+      const editor = vscode.window.activeTextEditor
+      // Проверяем, что изменения в текущем активном редакторе
+      if (editor && event.document === editor.document) {
+        tagDecorator.updateDocument(editor)
+      }
+    }),
+  )
+
+  // Добавляем обработку видимых редакторов при изменении конфигурации
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('colorizeReactTags')) {
+        // Принудительно обновляем все видимые редакторы
+        vscode.window.visibleTextEditors.forEach((editor) => {
+          tagDecorator.updateDocument(editor)
+        })
+      }
+    }),
+  )
+
+  // TODO Добавляем обработку закрытия редакторов для очистки кэша
+  // context.subscriptions.push(
+  //   vscode.window.onDidChangeVisibleTextEditors((editors) => {}),
+  // )
+
+  // Добавляем команду для принудительного обновления
+  const refreshCommand = vscode.commands.registerCommand(
+    'colorizeReactTags.refresh',
     () => {
-      // The code you place here will be executed every time your command is executed
-      // Display a message box to the user
-      vscode.window.showInformationMessage(
-        'Hello World from colorize-react-tags!',
-      )
+      vscode.window.visibleTextEditors.forEach((editor) => {
+        tagDecorator.updateDocument(editor)
+      })
+      vscode.window.showInformationMessage('Tag coloring refreshed')
     },
   )
 
-  context.subscriptions.push(disposable)
+  context.subscriptions.push(refreshCommand)
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  if (tagDecorator) {
+    tagDecorator.dispose()
+  }
+}
