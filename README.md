@@ -25,7 +25,7 @@ The extension analyzes your code in real-time and assigns a unique color to each
 5. In the file explorer that opens, navigate to the location where you downloaded the `.vsix` file.
 6. Select the file and click *"Install"*.
 7. Wait for the installation to complete. Once finished, you will see a notification confirming that the extension has been installed.
-8. Reload the extension if needed (see Commands below).
+8. Refresh tag colors if needed (see Commands below).
 
 ## Usage
 
