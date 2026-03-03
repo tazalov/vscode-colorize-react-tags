@@ -1,23 +1,76 @@
 {
   "name": "colorize-react-tags",
-  "displayName": "colorize-react-tags",
+  "displayName": "Colorize React Tags",
   "description": "Highlighting JSX/TSX tags (components) depending on the nesting in the markup",
   "version": "0.0.1",
+  "publisher": "tazalov",
+  "license": "MIT",
+  "homepage": "https://github.com/tazalov/vscode-colorize-react-tags/blob/dev/README.md",
+  "bugs": {
+    "url": "https://github.com/tazalov/vscode-colorize-react-tags/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tazalov/vscode-colorize-react-tags.git"
+  },
+  "icon": "assets/icon_tags.png",
   "engines": {
     "vscode": "^1.109.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Themes"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "colorize-react-tags.helloWorld",
-        "title": "Hello World"
+        "command": "colorizeReactTags.refresh",
+        "title": "Colorize React Tags: Refresh"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Colorize React Tags",
+      "properties": {
+        "colorizeReactTags.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable the extension"
+        },
+        "colorizeReactTags.maxFileSize": {
+          "type": "number",
+          "default": 100000,
+          "minimum": 100,
+          "description": "Maximum file size for changing color (bytes)"
+        },
+        "colorizeReactTags.debounceDelay": {
+          "type": "number",
+          "default": 300,
+          "minimum": 100,
+          "description": "Delay before updating color (ms)"
+        },
+        "colorizeReactTags.saturation": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Color saturation (0-100)"
+        },
+        "colorizeReactTags.lightness": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Color lightness (0-100)"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
@@ -35,17 +88,23 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.109.0",
+    "@babel/types": "^7.29.0",
+    "@types/babel__traverse": "^7.28.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.54.0",
-    "eslint": "^9.39.2",
+    "@types/vscode": "^1.109.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
     "esbuild": "^0.27.2",
+    "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "typescript-eslint": "^8.54.0"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.29.0",
+    "@babel/traverse": "^7.29.0"
   }
 }
