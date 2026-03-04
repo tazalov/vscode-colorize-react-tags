@@ -18,16 +18,14 @@ export class TagDecorator {
     new Map()
   // Кеш парсера
   private parserCache: Map<string, TagRange[]> = new Map()
-  // id таймаута для дебаунса обновления документа
-  private idUpdateTimeout: NodeJS.Timeout | null = null
+  // id таймаутов для дебаунса обновления документов (по URI)
+  private updateTimeouts: Map<string, NodeJS.Timeout> = new Map()
   // Конфигурация расширения
   private enabled: boolean = DEFAULT_CONFIG.enabled
   private maxFileSize: number = DEFAULT_CONFIG.maxFileSize
   private debounceDelay: number = DEFAULT_CONFIG.debounceDelay
   private saturation: number = DEFAULT_CONFIG.saturation
   private lightness: number = DEFAULT_CONFIG.lightness
-  // Список плагинов для babel
-  private readonly plugins: parser.ParserPlugin[] = BABEL_PLUGINS
 
   constructor() {
     this.updateConfig()
@@ -54,13 +52,17 @@ export class TagDecorator {
     // Ограничение по размеру документа (количество символов)
     if (document.getText().length > this.maxFileSize) return
 
-    if (this.idUpdateTimeout) {
-      clearTimeout(this.idUpdateTimeout)
+    const uri = document.uri.toString()
+    const existingTimeout = this.updateTimeouts.get(uri)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
     }
 
-    this.idUpdateTimeout = setTimeout(() => {
+    const timeout = setTimeout(() => {
+      this.updateTimeouts.delete(uri)
       this._updateDocument(editor)
     }, this.debounceDelay)
+    this.updateTimeouts.set(uri, timeout)
   }
 
   private _updateDocument(editor: vscode.TextEditor): void {
@@ -108,7 +110,7 @@ export class TagDecorator {
     try {
       const ast = parser.parse(text, {
         sourceType: 'module',
-        plugins: this.plugins,
+        plugins: BABEL_PLUGINS,
         errorRecovery: true,
         tokens: false,
       })
@@ -128,6 +130,7 @@ export class TagDecorator {
             // Понижаем level при выходе из props
             if (path.parent.type === 'JSXAttribute') {
               level--
+              level = Math.max(0, level)
             }
           },
         },
@@ -162,6 +165,7 @@ export class TagDecorator {
             if (openingElement.selfClosing) {
               stack.pop()
               level--
+              level = Math.max(0, level)
             }
           }
           // Обработка закрывающего тега/компонента
@@ -172,6 +176,7 @@ export class TagDecorator {
               // Выбираем последний открывающий тег/компонент (пару для закрывающего)
               const lastTag = stack.pop()
               level--
+              level = Math.max(0, level)
 
               if (path.node.loc) {
                 const range = new vscode.Range(
@@ -205,7 +210,7 @@ export class TagDecorator {
                 path.node.loc.start.line - 1,
                 path.node.loc.start.column,
                 path.node.loc.start.line - 1,
-                path.node.loc.start.column + FRAGMENT.OPEN.length,
+                path.node.loc.start.column + FRAGMENT.OPEN_LENGTH,
               )
               tagRanges.push({
                 range,
@@ -220,13 +225,14 @@ export class TagDecorator {
             if (stack.length > 0) {
               const lastTag = stack.pop()
               level--
+              level = Math.max(0, level)
 
               if (path.node.loc) {
                 const range = new vscode.Range(
                   path.node.loc.start.line - 1,
                   path.node.loc.start.column,
                   path.node.loc.start.line - 1,
-                  path.node.loc.start.column + FRAGMENT.CLOSE.length,
+                  path.node.loc.start.column + FRAGMENT.CLOSE_LENGTH,
                 )
                 tagRanges.push({
                   range,
@@ -309,17 +315,24 @@ export class TagDecorator {
 
   // Очистка кеша при закрытии документа (предотвращает memory leak)
   public clearCacheForDocument(document: vscode.TextDocument): void {
+    const uri = document.uri.toString()
+    const timeout = this.updateTimeouts.get(uri)
+    if (timeout) {
+      clearTimeout(timeout)
+      this.updateTimeouts.delete(uri)
+    }
     for (const key of this.parserCache.keys()) {
-      if (key.startsWith(document.uri.toString())) {
+      if (key.startsWith(uri)) {
         this.parserCache.delete(key)
       }
     }
   }
 
   public dispose(): void {
-    if (this.idUpdateTimeout) {
-      clearTimeout(this.idUpdateTimeout)
+    for (const timeout of this.updateTimeouts.values()) {
+      clearTimeout(timeout)
     }
+    this.updateTimeouts.clear()
     this.clearAllDecorations()
     this.parserCache.clear()
   }

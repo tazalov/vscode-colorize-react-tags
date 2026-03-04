@@ -1,14 +1,15 @@
 import * as parser from '@babel/parser'
+import { ExtensionConfig } from './types'
 
 // Данные для фрагметов <></>
 export const FRAGMENT = {
-  OPEN: { text: '<>', length: 2 },
-  CLOSE: { text: '</>', length: 3 },
+  OPEN_LENGTH: 2, // <>
+  CLOSE_LENGTH: 3, // </>
 } as const
 // Размер кеша
 export const CACHE_SIZE = 10
 // Дефолтные значения для конфигурации
-export const DEFAULT_CONFIG = {
+export const DEFAULT_CONFIG: ExtensionConfig = {
   enabled: true,
   maxFileSize: 100000,
   debounceDelay: 300,
