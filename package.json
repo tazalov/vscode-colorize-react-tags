@@ -47,7 +47,7 @@
           "type": "number",
           "default": 100000,
           "minimum": 100,
-          "description": "Maximum file size for changing color (bytes)"
+          "description": "Maximum file size for changing color (characters)"
         },
         "colorizeReactTags.debounceDelay": {
           "type": "number",

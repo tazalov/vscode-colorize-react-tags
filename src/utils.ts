@@ -30,8 +30,6 @@ export function getColorForLevel(
 export function getTagName(
   name: JSXIdentifier | JSXMemberExpression | JSXNamespacedName,
 ): string {
-  if (!name) return 'unknown'
-
   switch (name.type) {
     case 'JSXIdentifier':
       return name.name

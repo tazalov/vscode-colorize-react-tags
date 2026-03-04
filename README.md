@@ -8,7 +8,8 @@ A VS Code extension that colors JSX/TSX tag names based on their nesting level f
 - 🌈 Distinct colors for each nesting level (rotating hue)
 - ⚡ Optimized for performance with debouncing and file size limits
 - 🔄 Automatically updates as you type
-- 🎯 Supports TSX
+- 🎯 Supports JavaScript, JSX, TypeScript, TSX
+- 🔲 Supports React Fragments (`<>...</>`)
 
 ## How It Works
 
@@ -38,7 +39,7 @@ The extension activates automatically for supported file types. Tag names will b
 ### Performance Features
 
 - **Debounced updates**: Colors update 300ms after you stop typing
-- **File size limit**: Files larger than 100KB are skipped for performance
+- **File size limit**: Files larger than 100K characters are skipped for performance
 
 ## Configuration
 
@@ -47,8 +48,8 @@ You can customize the following settings in your VS Code `settings.json`:
 ```json
 {
     "colorizeReactTags.enabled": true, // Enable/disable the extension
-    "colorizeReactTags.maxFileSize": 100000, // Max file size (bytes)
-    "colorizeReactTags.updateDelay": 300, // Debounce delay (ms)
+    "colorizeReactTags.maxFileSize": 100000, // Max file size (characters)
+    "colorizeReactTags.debounceDelay": 300, // Debounce delay (ms)
     "colorizeReactTags.saturation": 60, // Color saturation (0-100)
     "colorizeReactTags.lightness": 60, // Color lightness (0-100)
 }
@@ -56,7 +57,7 @@ You can customize the following settings in your VS Code `settings.json`:
 
 ## Requirements
 
-- VS Code 1.60.0 or higher
+- VS Code 1.109.0 or higher
 
 ## Known Issues
 
