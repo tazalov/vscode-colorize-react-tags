@@ -1,3 +1,14 @@
+## [1.1.1] - 2026-03-04
+
+### Release 1.1.1
+
+* Fix debounce working incorrectly when switching between multiple editors
+* Add runtime validation (clamp) for user configuration values
+* Remove unused code and simplify internal constants
+* Fix incorrect setting name, VS Code version, and units in documentation
+
+**Full Changes:** [#4](https://github.com/tazalov/vscode-colorize-react-tags/pull/4)
+
 ## [1.1.0] - 2026-03-04
 
 ### Release 1.1.0
