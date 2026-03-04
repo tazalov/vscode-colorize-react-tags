@@ -2,7 +2,7 @@
   "name": "colorize-react-tags",
   "displayName": "Colorize React Tags",
   "description": "Highlighting JSX/TSX tags (components) depending on the nesting in the markup",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "publisher": "tazalov",
   "license": "MIT",
   "homepage": "https://github.com/tazalov/vscode-colorize-react-tags/blob/dev/README.md",
