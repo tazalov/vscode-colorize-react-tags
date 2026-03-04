@@ -117,6 +117,20 @@ export class TagDecorator {
       let level = 0
 
       traverse(ast, {
+        JSXExpressionContainer: {
+          enter: (path: NodePath) => {
+            // Повышаем level для компонентов, переданных как props
+            if (path.parent.type === 'JSXAttribute') {
+              level++
+            }
+          },
+          exit: (path: NodePath) => {
+            // Понижаем level при выходе из props
+            if (path.parent.type === 'JSXAttribute') {
+              level--
+            }
+          },
+        },
         enter: (path: NodePath) => {
           if (path.isJSXElement()) {
             const openingElement = path.node.openingElement
