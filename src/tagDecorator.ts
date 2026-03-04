@@ -3,7 +3,13 @@ import * as parser from '@babel/parser'
 import traverse, { NodePath } from '@babel/traverse'
 import { extractTagNameRange, getColorForLevel, getTagName } from './utils'
 import { StackItem, TagRange } from './types'
-import { BABEL_PLUGINS, CACHE_SIZE, DEFAULT_CONFIG, FRAGMENT } from './consts'
+import {
+  BABEL_PLUGINS,
+  CACHE_SIZE,
+  DEFAULT_CONFIG,
+  FRAGMENT,
+  SUPPORTED_LANGUAGES,
+} from './consts'
 import { getConfig } from './config'
 
 export class TagDecorator {
@@ -25,19 +31,6 @@ export class TagDecorator {
 
   constructor() {
     this.updateConfig()
-
-    // Слушатель изменений пользовательской конфигурации
-    vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('colorizeReactTags')) {
-        this.updateConfig()
-
-        if (this.enabled) {
-          this.updateAllEditors()
-        } else {
-          this.clearAllDecorations()
-        }
-      }
-    })
   }
 
   private updateConfig() {
@@ -55,6 +48,10 @@ export class TagDecorator {
 
     const document = editor.document
 
+    // Обрабатываем только известные JS/TS/JSX/TSX документы, чтобы избежать ненужного парсинга
+    if (!SUPPORTED_LANGUAGES.includes(document.languageId as any)) return
+
+    // Ограничение по размеру документа (количество символов)
     if (document.getText().length > this.maxFileSize) return
 
     if (this.idUpdateTimeout) {
@@ -67,17 +64,20 @@ export class TagDecorator {
   }
 
   private _updateDocument(editor: vscode.TextEditor): void {
+    // Проверяем, что редактор ещё открыт и видим (предотвращает race condition)
+    if (!vscode.window.visibleTextEditors.includes(editor)) {
+      return
+    }
+
     const document = editor.document
     const text = document.getText()
     const cacheKey = `${document.uri.toString()}_${document.version}`
 
-    // Если есть кеш, берем из кеша (возможны артефакты)
-    if (this.parserCache.has(cacheKey)) {
-      const cachedRanges = this.parserCache.get(cacheKey)
-      if (cachedRanges) {
-        this.applyDecorations(editor, cachedRanges)
-        return
-      }
+    // Если есть кеш, берем из кеша
+    const cachedRanges = this.parserCache.get(cacheKey)
+    if (cachedRanges) {
+      this.applyDecorations(editor, cachedRanges)
+      return
     }
 
     try {
@@ -287,9 +287,18 @@ export class TagDecorator {
     this.decorationTypes.clear()
   }
 
-  private updateAllEditors(): void {
+  public updateAllEditors(): void {
     for (const editor of vscode.window.visibleTextEditors) {
       this.updateDocument(editor)
+    }
+  }
+
+  // Очистка кеша при закрытии документа (предотвращает memory leak)
+  public clearCacheForDocument(document: vscode.TextDocument): void {
+    for (const key of this.parserCache.keys()) {
+      if (key.startsWith(document.uri.toString())) {
+        this.parserCache.delete(key)
+      }
     }
   }
 
