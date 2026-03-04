@@ -31,30 +31,30 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
-  // Добавляем обработку видимых редакторов при изменении конфигурации
+  // Очистка кеша при закрытии документа
   context.subscriptions.push(
-    vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('colorizeReactTags')) {
-        // Принудительно обновляем все видимые редакторы
-        vscode.window.visibleTextEditors.forEach((editor) => {
-          tagDecorator.updateDocument(editor)
-        })
-      }
+    vscode.workspace.onDidCloseTextDocument((document) => {
+      tagDecorator.clearCacheForDocument(document)
     }),
   )
 
-  // TODO Добавляем обработку закрытия редакторов для очистки кэша
-  // context.subscriptions.push(
-  //   vscode.window.onDidChangeVisibleTextEditors((editors) => {}),
-  // )
+  // Слушатель изменений конфигурации расширения
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('colorizeReactTags')) {
+        // Переинициализируем декоратор при смене конфигурации
+        tagDecorator.dispose()
+        tagDecorator = new TagDecorator()
+        tagDecorator.updateAllEditors()
+      }
+    }),
+  )
 
   // Добавляем команду для принудительного обновления
   const refreshCommand = vscode.commands.registerCommand(
     'colorizeReactTags.refresh',
     () => {
-      vscode.window.visibleTextEditors.forEach((editor) => {
-        tagDecorator.updateDocument(editor)
-      })
+      tagDecorator.updateAllEditors()
       vscode.window.showInformationMessage('Tag coloring refreshed')
     },
   )

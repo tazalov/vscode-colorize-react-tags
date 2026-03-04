@@ -17,3 +17,10 @@ export const DEFAULT_CONFIG = {
 }
 // Список плагинов для babel
 export const BABEL_PLUGINS: parser.ParserPlugin[] = ['jsx', 'typescript']
+// Поддерживаемые языки для обработки
+export const SUPPORTED_LANGUAGES = [
+  'javascript',
+  'javascriptreact',
+  'typescript',
+  'typescriptreact',
+]

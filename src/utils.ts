@@ -56,7 +56,7 @@ export function extractTagNameRange(
   fullRange: vscode.Range,
   tagName: string,
 ): vscode.Range | null {
-  // Тег/компонент открыт и закрыт на одной строке
+  // Однострочный тег/компонент
   if (fullRange.start.line === fullRange.end.line) {
     const line = document.lineAt(fullRange.start.line)
     const lineText = line.text
@@ -70,20 +70,21 @@ export function extractTagNameRange(
         tagStart + tagName.length,
       )
     }
+
+    return null
   }
 
-  // Тег/компонент открыт и закрыт на разных строках
+  // Многострочный: находим `tagName` относительно `fullRange` с помощью смещений документа
   const text = document.getText(fullRange)
   const tagNameIdx = text.indexOf(tagName)
 
   if (tagNameIdx !== -1) {
-    return new vscode.Range(
-      fullRange.start.line,
-      fullRange.start.character + tagNameIdx,
-      fullRange.start.line,
-      fullRange.start.character + tagNameIdx + tagName.length,
-    )
+    const fullRangeStartOffset = document.offsetAt(fullRange.start)
+    const startOffset = fullRangeStartOffset + tagNameIdx
+    const startPos = document.positionAt(startOffset)
+    const endPos = document.positionAt(startOffset + tagName.length)
+    return new vscode.Range(startPos, endPos)
   }
 
-  return fullRange
+  return null
 }
