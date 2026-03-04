@@ -49,7 +49,7 @@ export class TagDecorator {
     const document = editor.document
 
     // Обрабатываем только известные JS/TS/JSX/TSX документы, чтобы избежать ненужного парсинга
-    if (!SUPPORTED_LANGUAGES.includes(document.languageId as any)) return
+    if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return
 
     // Ограничение по размеру документа (количество символов)
     if (document.getText().length > this.maxFileSize) return
