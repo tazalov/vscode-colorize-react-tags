@@ -1,3 +1,13 @@
+## [2.0.0] - 2026-03-14
+
+### Release 2.0.0
+
+* Added support for HTML syntax (native parser)
+* Updated documentation (see README)
+* Improved color calculation for levels (better color distribution between adjacent levels)
+
+**Full Changes:** [#5](https://github.com/tazalov/vscode-colorize-react-tags/pull/5)
+
 ## [1.1.1] - 2026-03-04
 
 ### Release 1.1.1
