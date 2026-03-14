@@ -1,6 +1,6 @@
 # 🎨 Colorize React Tags
 
-A VS Code extension that colors JSX/TSX tag names based on their nesting level for better code readability.
+A VS Code extension that colors JSX/TSX/HTML tag names based on their nesting level for better code readability.
 
 ## Features
 
@@ -8,8 +8,7 @@ A VS Code extension that colors JSX/TSX tag names based on their nesting level f
 - 🌈 Distinct colors for each nesting level (rotating hue)
 - ⚡ Optimized for performance with debouncing and file size limits
 - 🔄 Automatically updates as you type
-- 🎯 Supports JavaScript, JSX, TypeScript, TSX
-- 🔲 Supports React Fragments (`<>...</>`)
+- 🎯 Supports JavaScript, JSX, TypeScript, TSX, HTML syntax
 
 ## How It Works
 
