@@ -10,7 +10,10 @@ export function getColorForLevel(
   saturation: number,
   lightness: number,
 ): string {
-  const hue = (level * 60) % 360
+  // Золотое сечение ~ 137.5 градусов (0.618 * 360)
+  const goldenAngle = 137.5
+
+  const hue = (level * goldenAngle) % 360
 
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
