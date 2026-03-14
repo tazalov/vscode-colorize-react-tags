@@ -19,9 +19,28 @@ export const DEFAULT_CONFIG: ExtensionConfig = {
 // Список плагинов для babel
 export const BABEL_PLUGINS: parser.ParserPlugin[] = ['jsx', 'typescript']
 // Поддерживаемые языки для обработки
-export const SUPPORTED_LANGUAGES = [
+export const SUPPORTED_LANGUAGES = new Set([
   'javascript',
   'javascriptreact',
   'typescript',
   'typescriptreact',
-]
+  'html',
+])
+// Void-элементы HTML (не имеют закрывающего тега)
+export const HTML_VOID_ELS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+])
+export const HTML_SKIP_ELS = new Set(['script', 'style', 'textarea', 'xmp'])

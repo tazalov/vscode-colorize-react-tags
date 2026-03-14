@@ -1,16 +1,9 @@
 import * as vscode from 'vscode'
-import * as parser from '@babel/parser'
-import traverse, { NodePath } from '@babel/traverse'
-import { extractTagNameRange, getColorForLevel, getTagName } from './utils'
-import { StackItem, TagRange } from './types'
-import {
-  BABEL_PLUGINS,
-  CACHE_SIZE,
-  DEFAULT_CONFIG,
-  FRAGMENT,
-  SUPPORTED_LANGUAGES,
-} from './consts'
+import { getColorForLevel } from './utils'
+import { TagRange } from './types'
+import { CACHE_SIZE, DEFAULT_CONFIG, SUPPORTED_LANGUAGES } from './consts'
 import { getConfig } from './config'
+import { parseHtml, parseJsx } from './parsers'
 
 export class TagDecorator {
   // Список декораций
@@ -47,10 +40,7 @@ export class TagDecorator {
     const document = editor.document
 
     // Обрабатываем только известные JS/TS/JSX/TSX документы, чтобы избежать ненужного парсинга
-    if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return
-
-    // Ограничение по размеру документа (количество символов)
-    if (document.getText().length > this.maxFileSize) return
+    if (!SUPPORTED_LANGUAGES.has(document.languageId)) return
 
     const uri = document.uri.toString()
     const existingTimeout = this.updateTimeouts.get(uri)
@@ -73,6 +63,10 @@ export class TagDecorator {
 
     const document = editor.document
     const text = document.getText()
+
+    // Ограничение по размеру документа (количество символов)
+    if (text.length > this.maxFileSize) return
+
     const cacheKey = `${document.uri.toString()}_${document.version}`
 
     // Если есть кеш, берем из кеша
@@ -105,150 +99,10 @@ export class TagDecorator {
     text: string,
     document: vscode.TextDocument,
   ): TagRange[] {
-    const tagRanges: TagRange[] = []
-
-    try {
-      const ast = parser.parse(text, {
-        sourceType: 'module',
-        plugins: BABEL_PLUGINS,
-        errorRecovery: true,
-        tokens: false,
-      })
-
-      const stack: StackItem[] = []
-      let level = 0
-
-      traverse(ast, {
-        JSXExpressionContainer: {
-          enter: (path: NodePath) => {
-            // Повышаем level для компонентов, переданных как props
-            if (path.parent.type === 'JSXAttribute') {
-              level++
-            }
-          },
-          exit: (path: NodePath) => {
-            // Понижаем level при выходе из props
-            if (path.parent.type === 'JSXAttribute') {
-              level--
-              level = Math.max(0, level)
-            }
-          },
-        },
-        enter: (path: NodePath) => {
-          if (path.isJSXElement()) {
-            const openingElement = path.node.openingElement
-            const tagName = getTagName(openingElement.name)
-
-            // Обработка открывающего тега/компонента
-            if (openingElement.loc) {
-              const range = new vscode.Range(
-                openingElement.loc.start.line - 1,
-                openingElement.loc.start.column,
-                openingElement.loc.end.line - 1,
-                openingElement.loc.end.column,
-              )
-
-              const tagNameRange = extractTagNameRange(document, range, tagName)
-              if (tagNameRange) {
-                tagRanges.push({
-                  range: tagNameRange,
-                  level,
-                  tagName,
-                })
-              }
-            }
-
-            // Добавляем в стэк открывающий тег/компонент
-            stack.push({ tagName, level: level++ })
-
-            // Самозакрывающий тег/компонент
-            if (openingElement.selfClosing) {
-              stack.pop()
-              level--
-              level = Math.max(0, level)
-            }
-          }
-          // Обработка закрывающего тега/компонента
-          if (path.isJSXClosingElement()) {
-            const tagName = getTagName(path.node.name)
-
-            if (stack.length > 0) {
-              // Выбираем последний открывающий тег/компонент (пару для закрывающего)
-              const lastTag = stack.pop()
-              level--
-              level = Math.max(0, level)
-
-              if (path.node.loc) {
-                const range = new vscode.Range(
-                  path.node.loc.start.line - 1,
-                  path.node.loc.start.column,
-                  path.node.loc.end.line - 1,
-                  path.node.loc.end.column,
-                )
-
-                const tagNameRange = extractTagNameRange(
-                  document,
-                  range,
-                  tagName,
-                )
-
-                if (tagNameRange) {
-                  tagRanges.push({
-                    range: tagNameRange,
-                    level: lastTag?.level ?? level,
-                    tagName,
-                  })
-                }
-              }
-            }
-          }
-          // React фрагменты просто увеличивают уровень вложенности
-          // Обработка фрагментов открывающих <>
-          if (path.isJSXFragment()) {
-            if (path.node.loc) {
-              const range = new vscode.Range(
-                path.node.loc.start.line - 1,
-                path.node.loc.start.column,
-                path.node.loc.start.line - 1,
-                path.node.loc.start.column + FRAGMENT.OPEN_LENGTH,
-              )
-              tagRanges.push({
-                range,
-                level,
-                tagName: 'Fragment',
-              })
-            }
-            stack.push({ tagName: 'Fragment', level: level++ })
-          }
-          // Обработка фрагментов закрывающих </>
-          if (path.isJSXClosingFragment()) {
-            if (stack.length > 0) {
-              const lastTag = stack.pop()
-              level--
-              level = Math.max(0, level)
-
-              if (path.node.loc) {
-                const range = new vscode.Range(
-                  path.node.loc.start.line - 1,
-                  path.node.loc.start.column,
-                  path.node.loc.start.line - 1,
-                  path.node.loc.start.column + FRAGMENT.CLOSE_LENGTH,
-                )
-                tagRanges.push({
-                  range,
-                  level: lastTag?.level ?? level,
-                  tagName: 'Fragment',
-                })
-              }
-            }
-          }
-        },
-      })
-    } catch (error) {
-      console.error('Babel parse error:', error)
+    if (document.languageId === 'html') {
+      return parseHtml(text, document)
     }
-
-    return tagRanges
+    return parseJsx(text, document)
   }
 
   private applyDecorations(
