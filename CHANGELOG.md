@@ -1,3 +1,11 @@
+## [2.0.1] - 2026-03-15
+
+### Release 2.0.1
+
+* Replacing own parser with htmlparser2 (for easier support, performance loss is minimal)
+
+**Full Changes:** [#6](https://github.com/tazalov/vscode-colorize-react-tags/pull/6)
+
 ## [2.0.0] - 2026-03-14
 
 ### Release 2.0.0
