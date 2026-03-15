@@ -91,6 +91,7 @@ export function parseJsx(
 
     const stack: StackItem[] = []
     let level = 0
+    let pairCounter = 0
 
     traverse(ast, {
       JSXExpressionContainer: {
@@ -103,8 +104,7 @@ export function parseJsx(
         exit: (path: NodePath) => {
           // Понижаем level при выходе из props
           if (path.parent.type === 'JSXAttribute') {
-            level--
-            level = Math.max(0, level)
+            level = Math.max(0, level - 1)
           }
         },
       },
@@ -112,6 +112,7 @@ export function parseJsx(
         if (path.isJSXElement()) {
           const openingElement = path.node.openingElement
           const tagName = getTagName(openingElement.name)
+          const currentPairIdx = pairCounter++
 
           // Обработка открывающего тега/компонента
           if (openingElement.loc) {
@@ -128,12 +129,13 @@ export function parseJsx(
                 range: tagNameRange,
                 level,
                 tagName,
+                pairIdx: currentPairIdx,
               })
             }
           }
 
           // Добавляем в стэк открывающий тег/компонент
-          stack.push({ tagName, level: level++ })
+          stack.push({ tagName, level: level++, pairIdx: currentPairIdx })
 
           // Самозакрывающий тег/компонент
           if (openingElement.selfClosing) {
@@ -148,7 +150,7 @@ export function parseJsx(
 
           if (stack.length > 0) {
             // Выбираем последний открывающий тег/компонент (пару для закрывающего)
-            const lastTag = stack.pop()
+            const lastTag = stack.pop()! // Всегда есть, т.к. есть проверка на length > 0
             level--
             level = Math.max(0, level)
 
@@ -164,8 +166,9 @@ export function parseJsx(
               if (tagNameRange) {
                 tagRanges.push({
                   range: tagNameRange,
-                  level: lastTag?.level ?? level,
+                  level: lastTag.level,
                   tagName,
+                  pairIdx: lastTag.pairIdx,
                 })
               }
             }
@@ -174,6 +177,7 @@ export function parseJsx(
         // React фрагменты просто увеличивают уровень вложенности
         // Обработка фрагментов открывающих <>
         if (path.isJSXFragment()) {
+          const currentPairIdx = pairCounter++
           if (path.node.loc) {
             const range = new vscode.Range(
               path.node.loc.start.line - 1,
@@ -185,14 +189,19 @@ export function parseJsx(
               range,
               level,
               tagName: 'Fragment',
+              pairIdx: currentPairIdx,
             })
           }
-          stack.push({ tagName: 'Fragment', level: level++ })
+          stack.push({
+            tagName: 'Fragment',
+            level: level++,
+            pairIdx: currentPairIdx,
+          })
         }
         // Обработка фрагментов закрывающих </>
         if (path.isJSXClosingFragment()) {
           if (stack.length > 0) {
-            const lastTag = stack.pop()
+            const lastTag = stack.pop()! // Всегда есть, т.к. есть проверка на length > 0
             level--
             level = Math.max(0, level)
 
@@ -205,8 +214,9 @@ export function parseJsx(
               )
               tagRanges.push({
                 range,
-                level: lastTag?.level ?? level,
+                level: lastTag.level,
                 tagName: 'Fragment',
+                pairIdx: lastTag.pairIdx,
               })
             }
           }

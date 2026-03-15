@@ -39,6 +39,7 @@ export function parseHtml(
   const tagRanges: TagRange[] = []
   const stack: StackItem[] = []
   let level = 0
+  let pairCounter = 0
   const lineOffsets = buildLineOffsets(text)
 
   const parser = new Parser({
@@ -46,6 +47,7 @@ export function parseHtml(
       // parser.startIndex указывает на '<', имя тега начинается сразу после
       const nameStart = parser.startIndex + 1
       const nameEnd = nameStart + name.length
+      const currentPairIdx = pairCounter++
       tagRanges.push({
         range: new vscode.Range(
           offsetToPosition(lineOffsets, nameStart),
@@ -53,8 +55,9 @@ export function parseHtml(
         ),
         level,
         tagName: name,
+        pairIdx: currentPairIdx,
       })
-      stack.push({ tagName: name, level: level++ })
+      stack.push({ tagName: name, level: level++, pairIdx: currentPairIdx })
     },
 
     onclosetag(name: string, isImplied: boolean) {
@@ -76,6 +79,7 @@ export function parseHtml(
             ),
             level: lastTag.level,
             tagName: name,
+            pairIdx: lastTag.pairIdx,
           })
         }
       }

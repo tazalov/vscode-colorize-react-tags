@@ -15,6 +15,7 @@ export const DEFAULT_CONFIG: ExtensionConfig = {
   debounceDelay: 300,
   saturation: 60,
   lightness: 60,
+  colorMode: 'nesting',
 }
 // Список плагинов для babel
 export const BABEL_PLUGINS: parser.ParserPlugin[] = ['jsx', 'typescript']
