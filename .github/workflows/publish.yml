@@ -4,10 +4,24 @@ on:
   pull_request:
     types: [closed]
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to process'
+        required: true
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
 
 jobs:
   publish:
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -32,22 +46,30 @@ jobs:
       
       - name: Get PR details
         id: pr
+        env:
+          PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_BODY="${{ github.event.pull_request.body }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_JSON=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER")
           
-          REPO="${{ github.repository }}"
+          PR_TITLE=$(echo "$PR_JSON" | jq -r '.title')
+          PR_BODY=$(echo "$PR_JSON" | jq -r '.body')
           
-          LABELS_JSON=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/labels")
-          
-          if echo "$LABELS_JSON" | jq -e '.[] | select(.name=="major")' > /dev/null 2>&1; then
-            VERSION_TYPE="major"
-          elif echo "$LABELS_JSON" | jq -e '.[] | select(.name=="minor")' > /dev/null 2>&1; then
-            VERSION_TYPE="minor"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION_TYPE="${{ inputs.version_type }}"
           else
-            VERSION_TYPE="patch"
+            LABELS_JSON=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/labels")
+            
+            if echo "$LABELS_JSON" | jq -e '.[] | select(.name=="major")' > /dev/null 2>&1; then
+              VERSION_TYPE="major"
+            elif echo "$LABELS_JSON" | jq -e '.[] | select(.name=="minor")' > /dev/null 2>&1; then
+              VERSION_TYPE="minor"
+            else
+              VERSION_TYPE="patch"
+            fi
           fi
           
           echo "title=$PR_TITLE" >> $GITHUB_OUTPUT
@@ -55,8 +77,6 @@ jobs:
           echo "$PR_BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           echo "version-type=$VERSION_TYPE" >> $GITHUB_OUTPUT
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Switch to main branch
         run: |
@@ -78,11 +98,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate CHANGELOG
+        env:
+          NEW_VERSION: ${{ steps.bump.outputs.new-version }}
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          PR_BODY: ${{ steps.pr.outputs.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NEW_VERSION="${{ steps.bump.outputs.new-version }}"
-          PR_TITLE="${{ steps.pr.outputs.title }}"
-          PR_BODY="${{ steps.pr.outputs.body }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
           TODAY=$(date +%Y-%m-%d)
           
           FORMATTED_BODY=$(echo "$PR_BODY" | sed 's/^[*-]\s\+/* /' | sed '/^$/d' | sed 's/^/* /')
@@ -107,8 +129,6 @@ jobs:
           git add CHANGELOG.md package.json package-lock.json
           git commit -m "chore(release): v$NEW_VERSION [skip ci]"
           git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Publish to Open VSX
         uses: HaaLeo/publish-vscode-extension@v1
