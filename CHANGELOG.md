@@ -1,3 +1,13 @@
+## [2.1.0] - 2026-03-16
+
+### Release 2.1.0
+
+* Added the colorMode parameter to change the color change logic
+* Increased cache size (from 10 to 50 documents)
+* Small parser optimizations
+
+**Full Changes:** [#](https://github.com/tazalov/vscode-colorize-react-tags/pull/)
+
 ## [2.0.1] - 2026-03-15
 
 ### Release 2.0.1
