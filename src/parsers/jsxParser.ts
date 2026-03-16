@@ -5,6 +5,8 @@ import {
   JSXIdentifier,
   JSXMemberExpression,
   JSXNamespacedName,
+  JSXElement as JSXElementNode,
+  JSXFragment as JSXFragmentNode,
 } from '@babel/types'
 
 import { StackItem, TagRange } from '../types'
@@ -30,54 +32,9 @@ function getTagName(
   }
 }
 
-/**
- * Функция извлечения имени ОТКРЫВАЮЩЕГО тега/компонента из документа
- * @param document документ VSCode
- * @param fullRange vscode.Range с начальным и конечным позициями тега/компонента
- * @param tagName название тега/компонента
- * @returns vscode.Range с начальным и конечным позициями название тега/компонента
- */
-function extractTagNameRange(
-  document: vscode.TextDocument,
-  fullRange: vscode.Range,
-  tagName: string,
-): vscode.Range | null {
-  // Однострочный тег/компонент
-  if (fullRange.start.line === fullRange.end.line) {
-    const line = document.lineAt(fullRange.start.line)
-    const lineText = line.text
-    const tagStart = lineText.indexOf(tagName, fullRange.start.character)
-
-    if (tagStart !== -1 && tagStart < fullRange.end.character) {
-      return new vscode.Range(
-        fullRange.start.line,
-        tagStart,
-        fullRange.start.line,
-        tagStart + tagName.length,
-      )
-    }
-
-    return null
-  }
-
-  // Многострочный: находим `tagName` относительно `fullRange` с помощью смещений документа
-  const text = document.getText(fullRange)
-  const tagNameIdx = text.indexOf(tagName)
-
-  if (tagNameIdx !== -1) {
-    const fullRangeStartOffset = document.offsetAt(fullRange.start)
-    const startOffset = fullRangeStartOffset + tagNameIdx
-    const startPos = document.positionAt(startOffset)
-    const endPos = document.positionAt(startOffset + tagName.length)
-    return new vscode.Range(startPos, endPos)
-  }
-
-  return null
-}
-
 export function parseJsx(
   text: string,
-  document: vscode.TextDocument,
+  _document: vscode.TextDocument,
 ): TagRange[] {
   const tagRanges: TagRange[] = []
 
@@ -91,6 +48,7 @@ export function parseJsx(
 
     const stack: StackItem[] = []
     let level = 0
+    let pairCounter = 0
 
     traverse(ast, {
       JSXExpressionContainer: {
@@ -103,114 +61,103 @@ export function parseJsx(
         exit: (path: NodePath) => {
           // Понижаем level при выходе из props
           if (path.parent.type === 'JSXAttribute') {
-            level--
-            level = Math.max(0, level)
+            level = Math.max(0, level - 1)
           }
         },
       },
-      enter: (path: NodePath) => {
-        if (path.isJSXElement()) {
-          const openingElement = path.node.openingElement
+      JSXElement: {
+        enter: (path: NodePath<JSXElementNode>) => {
+          const { openingElement } = path.node
           const tagName = getTagName(openingElement.name)
+          const pairIdx = pairCounter++
 
-          // Обработка открывающего тега/компонента
+          // Имя тега всегда начинается сразу после '<' (column + 1)
           if (openingElement.loc) {
-            const range = new vscode.Range(
-              openingElement.loc.start.line - 1,
-              openingElement.loc.start.column,
-              openingElement.loc.end.line - 1,
-              openingElement.loc.end.column,
-            )
-
-            const tagNameRange = extractTagNameRange(document, range, tagName)
-            if (tagNameRange) {
-              tagRanges.push({
-                range: tagNameRange,
-                level,
-                tagName,
-              })
-            }
-          }
-
-          // Добавляем в стэк открывающий тег/компонент
-          stack.push({ tagName, level: level++ })
-
-          // Самозакрывающий тег/компонент
-          if (openingElement.selfClosing) {
-            stack.pop()
-            level--
-            level = Math.max(0, level)
-          }
-        }
-        // Обработка закрывающего тега/компонента
-        if (path.isJSXClosingElement()) {
-          const tagName = getTagName(path.node.name)
-
-          if (stack.length > 0) {
-            // Выбираем последний открывающий тег/компонент (пару для закрывающего)
-            const lastTag = stack.pop()
-            level--
-            level = Math.max(0, level)
-
-            if (path.node.loc) {
-              const range = new vscode.Range(
-                path.node.loc.start.line - 1,
-                path.node.loc.start.column,
-                path.node.loc.end.line - 1,
-                path.node.loc.end.column,
-              )
-
-              const tagNameRange = extractTagNameRange(document, range, tagName)
-              if (tagNameRange) {
-                tagRanges.push({
-                  range: tagNameRange,
-                  level: lastTag?.level ?? level,
-                  tagName,
-                })
-              }
-            }
-          }
-        }
-        // React фрагменты просто увеличивают уровень вложенности
-        // Обработка фрагментов открывающих <>
-        if (path.isJSXFragment()) {
-          if (path.node.loc) {
-            const range = new vscode.Range(
-              path.node.loc.start.line - 1,
-              path.node.loc.start.column,
-              path.node.loc.start.line - 1,
-              path.node.loc.start.column + FRAGMENT.OPEN_LENGTH,
-            )
+            const { start } = openingElement.loc
             tagRanges.push({
-              range,
+              range: new vscode.Range(
+                start.line - 1,
+                start.column + 1,
+                start.line - 1,
+                start.column + 1 + tagName.length,
+              ),
               level,
-              tagName: 'Fragment',
+              tagName,
+              pairIdx,
             })
           }
-          stack.push({ tagName: 'Fragment', level: level++ })
-        }
-        // Обработка фрагментов закрывающих </>
-        if (path.isJSXClosingFragment()) {
-          if (stack.length > 0) {
-            const lastTag = stack.pop()
-            level--
-            level = Math.max(0, level)
 
-            if (path.node.loc) {
-              const range = new vscode.Range(
-                path.node.loc.start.line - 1,
-                path.node.loc.start.column,
-                path.node.loc.start.line - 1,
-                path.node.loc.start.column + FRAGMENT.CLOSE_LENGTH,
-              )
-              tagRanges.push({
-                range,
-                level: lastTag?.level ?? level,
-                tagName: 'Fragment',
-              })
-            }
+          stack.push({ tagName, level: level++, pairIdx })
+          // Самозакрывающий тег — сразу снимаем со стека
+          if (openingElement.selfClosing) {
+            stack.pop()
+            level = Math.max(0, level - 1)
           }
-        }
+        },
+        exit: (path: NodePath<JSXElementNode>) => {
+          // Самозакрывающие уже обработаны в enter
+          if (path.node.openingElement.selfClosing || stack.length === 0) return
+          const lastTag = stack.pop()!
+          level = Math.max(0, level - 1)
+
+          // Имя закрывающего тега начинается после '</' (column + 2)
+          const { closingElement } = path.node
+          if (closingElement?.loc) {
+            const { start } = closingElement.loc
+            tagRanges.push({
+              range: new vscode.Range(
+                start.line - 1,
+                start.column + 2,
+                start.line - 1,
+                start.column + 2 + lastTag.tagName.length,
+              ),
+              level: lastTag.level,
+              tagName: lastTag.tagName,
+              pairIdx: lastTag.pairIdx,
+            })
+          }
+        },
+      },
+      JSXFragment: {
+        enter: (path: NodePath<JSXFragmentNode>) => {
+          const pairIdx = pairCounter++
+          if (path.node.loc) {
+            const { start } = path.node.loc
+            tagRanges.push({
+              range: new vscode.Range(
+                start.line - 1,
+                start.column,
+                start.line - 1,
+                start.column + FRAGMENT.OPEN_LENGTH,
+              ),
+              level,
+              tagName: 'Fragment',
+              pairIdx,
+            })
+          }
+          stack.push({ tagName: 'Fragment', level: level++, pairIdx })
+        },
+        exit: (path: NodePath<JSXFragmentNode>) => {
+          if (stack.length === 0) return
+          const lastTag = stack.pop()!
+          level = Math.max(0, level - 1)
+
+          const { closingFragment } = path.node
+          if (closingFragment.loc) {
+            const { start } = closingFragment.loc
+            tagRanges.push({
+              range: new vscode.Range(
+                start.line - 1,
+                start.column,
+                start.line - 1,
+                start.column + FRAGMENT.CLOSE_LENGTH,
+              ),
+              level: lastTag.level,
+              tagName: 'Fragment',
+              pairIdx: lastTag.pairIdx,
+            })
+          }
+        },
       },
     })
   } catch (error) {

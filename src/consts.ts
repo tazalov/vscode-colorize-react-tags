@@ -7,7 +7,7 @@ export const FRAGMENT = {
   CLOSE_LENGTH: 3, // </>
 } as const
 // Размер кеша
-export const CACHE_SIZE = 10
+export const CACHE_SIZE = 50
 // Дефолтные значения для конфигурации
 export const DEFAULT_CONFIG: ExtensionConfig = {
   enabled: true,
@@ -15,6 +15,7 @@ export const DEFAULT_CONFIG: ExtensionConfig = {
   debounceDelay: 300,
   saturation: 60,
   lightness: 60,
+  colorMode: 'nesting',
 }
 // Список плагинов для babel
 export const BABEL_PLUGINS: parser.ParserPlugin[] = ['jsx', 'typescript']

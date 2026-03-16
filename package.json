@@ -69,6 +69,16 @@
           "minimum": 0,
           "maximum": 100,
           "description": "Color lightness (0-100)"
+        },
+        "colorizeReactTags.colorMode": {
+          "type": "string",
+          "default": "nesting",
+          "enum": ["nesting", "sequential"],
+          "enumDescriptions": [
+            "Color changes by nesting depth",
+            "Color changes by order of appearance; each open/close pair shares one color"
+          ],
+          "description": "How tag colors are assigned"
         }
       }
     }

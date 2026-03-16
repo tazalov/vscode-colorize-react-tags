@@ -19,6 +19,7 @@ export class TagDecorator {
   private debounceDelay: number = DEFAULT_CONFIG.debounceDelay
   private saturation: number = DEFAULT_CONFIG.saturation
   private lightness: number = DEFAULT_CONFIG.lightness
+  private colorMode: 'nesting' | 'sequential' = DEFAULT_CONFIG.colorMode
 
   constructor() {
     this.updateConfig()
@@ -32,6 +33,7 @@ export class TagDecorator {
     this.debounceDelay = config.debounceDelay
     this.saturation = config.saturation
     this.lightness = config.lightness
+    this.colorMode = config.colorMode
   }
 
   public updateDocument(editor: vscode.TextEditor | undefined): void {
@@ -115,14 +117,15 @@ export class TagDecorator {
       return
     }
 
-    // Группируем теги/компоненты по уровню вложенности
+    // Группируем теги/компоненты по уровню вложенности/порядку
     const rangesByLevel = new Map<number, vscode.Range[]>()
 
     for (const item of tagRanges) {
-      let ranges = rangesByLevel.get(item.level)
+      const key = this.colorMode === 'sequential' ? item.pairIdx : item.level
+      let ranges = rangesByLevel.get(key)
       if (!ranges) {
         ranges = []
-        rangesByLevel.set(item.level, ranges)
+        rangesByLevel.set(key, ranges)
       }
       ranges.push(item.range)
     }
